@@ -309,6 +309,8 @@ class GConfKeyHandler(object):
             notify_add(LKEY(key), self.reload_accelerators)
             self.client.notify(LKEY(key))
 
+
+
     def reload_globals(self, client, connection_id, entry, data):
         """Unbind all global hotkeys and rebind the show_hide
         method. If more global hotkeys should be added, just connect
@@ -382,6 +384,14 @@ class GConfKeyHandler(object):
         if key > 0:
             self.accel_group.connect_group(key, mask, gtk.ACCEL_VISIBLE,
                                            self.guake.accel_toggle_fullscreen)
+        # loading Alt+1..9 tab changer
+        self.load_tab_changers()
+
+    def load_tab_changers(self):
+        print "Loading tab changers"
+        for index in range(1,9):
+            key, mask = gtk.accelerator_parse("<Alt>%i" % index)
+            self.accel_group.connect_group(key, mask, gtk.ACCEL_VISIBLE, self.guake.accel_change_tab)
 
 class GuakeTerminal(vte.Terminal):
     """Just a vte.Terminal with some properties already set.
@@ -575,7 +585,7 @@ class Guake(SimpleGladeApp):
                   'Please use Guake Preferences dialog to choose another '
                   'key (The trayicon was enabled)')
             self.client.set_bool(KEY('/general/use_trayicon'), True)
-            
+
         # add tabs remembered from last session
         try:
             guake_tabs = open(os.path.expanduser('~/.guake_tabs'), 'r')
@@ -586,20 +596,20 @@ class Guake(SimpleGladeApp):
         except:
             # not there? not readable? add failed?
             pass
-        
+
         if not self.term_list:
             self.add_tab()
-            
+
     def show_notification(self, text):
         if self.client.get_bool(KEY('/general/use_popup')):
             notification = pynotify.Notification(
                 _('Guake!'),
                 _(text +
-                  '\nPress <b>%s</b> to use it.') % 
-                self.notification_label, 
+                  '\nPress <b>%s</b> to use it.') %
+                self.notification_label,
                 self.notification_pixmapfile)
             notification.show()
-    
+
     def execute_command(self, command, tab=None):
         """Execute the `command' in the `tab'. If tab is None, the
         command will be executed in the currently selected
@@ -709,7 +719,7 @@ class Guake(SimpleGladeApp):
             self.set_terminal_focus()
         else:
             self.hide()
- 
+
     def show(self):
         """Shows the main window and grabs the focus on it.
         """
@@ -779,6 +789,12 @@ class Guake(SimpleGladeApp):
         self.client.notify(KEY('/general/use_default_font'))
         self.client.notify(KEY('/general/compat_backspace'))
         self.client.notify(KEY('/general/compat_delete'))
+
+    # tab changer for Alt+1..9 ability // yanekk
+    def accel_change_tab(self, *args):
+        index = int(args[2]) - 49 # selected tab index
+        self.select_tab(index)
+        return True
 
     def accel_add(self, *args):
         """Callback to add a new tab. Called by the accel key.
@@ -1014,10 +1030,10 @@ class Guake(SimpleGladeApp):
         self.notebook.append_page(box, None)
         self.show_page(self.notebook.page_num(box))
         self.load_config()
-        
+
     def show_page(self, page_num):
         self.notebook.set_current_page(page_num)
-        # This here because vte color configuration 
+        # This here because vte color configuration
         # works only after the widget is shown.
         self.client.notify(KEY('/style/font/color'))
         self.client.notify(KEY('/style/background/color'))
@@ -1093,7 +1109,7 @@ class Guake(SimpleGladeApp):
         pagepos = self.notebook.get_current_page()
         self.selected_tab = self.tabs.get_children()[pagepos]
         return pagepos
-        
+
     def quit(self):
         """ override to save various tabs
         """
@@ -1220,7 +1236,7 @@ def main():
         # here we know that guake was called without any parameter and
         # it is already running, so, lets toggle its visibility.
         remote_object.show_hide()
-        
+
     # Pop-up that shows that guake is working properly
     if not already_running:
         instance.show_notification('Guake has started.')
@@ -1235,3 +1251,4 @@ if __name__ == '__main__':
 
     if not main():
         gtk.main()
+
